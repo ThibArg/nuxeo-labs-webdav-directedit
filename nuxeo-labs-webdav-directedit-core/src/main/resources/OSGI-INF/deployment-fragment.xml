@@ -1,0 +1,51 @@
+<?xml version="1.0"?>
+<fragment version="1">
+
+  <require>org.nuxeo.web.ui</require>
+
+  <!--
+    Mount the WebDAV endpoint Microsoft Office talks to.
+
+    /site/* is already mapped to the WebEngine servlet, and carries the NuxeoAuthenticationFilter,
+    NuxeoRequestController, HeaderFixFilter and SessionCleanupFilter mappings. A more specific servlet mapping wins
+    over /site/*, so this servlet takes over its own subtree while inheriting all of those filters. Do not add
+    filter-mapping entries here: a filter matched by both /site/* and /site/officeedit/* would run twice.
+  -->
+  <extension target="web#SERVLET">
+    <servlet>
+      <servlet-name>Nuxeo Labs Office Edit Servlet</servlet-name>
+      <servlet-class>nuxeo.labs.webdav.directedit.server.OfficeEditServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+      <servlet-name>Nuxeo Labs Office Edit Servlet</servlet-name>
+      <url-pattern>/site/officeedit/*</url-pattern>
+    </servlet-mapping>
+  </extension>
+
+  <install>
+    <!-- Install web resources, excluding i18n (handled separately) -->
+    <unzip from="${bundle.fileName}" to="/" prefix="web">
+      <include>web/nuxeo.war/**</include>
+      <exclude>web/nuxeo.war/ui/i18n/**</exclude>
+    </unzip>
+
+    <!-- create a temporary folder -->
+    <delete path="${bundle.fileName}.tmp"/>
+    <mkdir path="${bundle.fileName}.tmp"/>
+    <unzip from="${bundle.fileName}" to="${bundle.fileName}.tmp">
+      <include>web/nuxeo.war/ui/i18n/**</include>
+    </unzip>
+
+    <!--
+      Append the translations to the existing Web UI ones. AppendCommand merges JSON with Jackson when the
+      destination already exists, which it does: the web-ui addon fragment copies messages-fr.json to the
+      four-letter locales. The require above guarantees we run after it.
+    -->
+    <append from="${bundle.fileName}.tmp/web/nuxeo.war/ui/i18n/messages.json" to="nuxeo.war/ui/i18n/messages.json" addNewLine="true"/>
+    <append from="${bundle.fileName}.tmp/web/nuxeo.war/ui/i18n/messages-fr.json" to="nuxeo.war/ui/i18n/messages-fr.json" addNewLine="true"/>
+    <append from="${bundle.fileName}.tmp/web/nuxeo.war/ui/i18n/messages-fr.json" to="nuxeo.war/ui/i18n/messages-fr-FR.json" addNewLine="true"/>
+    <append from="${bundle.fileName}.tmp/web/nuxeo.war/ui/i18n/messages-fr.json" to="nuxeo.war/ui/i18n/messages-fr-CA.json" addNewLine="true"/>
+    <delete path="${bundle.fileName}.tmp"/>
+  </install>
+
+</fragment>

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.test.capabilityUrlDisabled">
+
+  <documentation>
+    Turns off the capability URL, so the edit session token in the URL no longer authenticates the request and
+    Microsoft Office has to answer a credentials prompt instead.
+  </documentation>
+
+  <require>nuxeo.labs.webdavdirectedit.properties</require>
+
+  <extension target="org.nuxeo.runtime.ConfigurationService" point="configuration">
+    <property name="nuxeo.labs.webdavDirectEdit.capabilityUrl.enabled">false</property>
+  </extension>
+
+</component>

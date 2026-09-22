@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.test.disabled">
+
+  <documentation>
+    Turns the whole feature off, to check the server enforces the kill switch and does not rely on the
+    Web UI hiding the button.
+  </documentation>
+
+  <require>nuxeo.labs.webdavdirectedit.properties</require>
+
+  <extension target="org.nuxeo.runtime.ConfigurationService" point="configuration">
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.enabled">false</property>
+  </extension>
+
+</component>

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.test.tokenAuthDisabled">
+
+  <documentation>
+    Turns off token authentication on the WebDAV endpoint, so only real passwords are accepted.
+  </documentation>
+
+  <require>nuxeo.labs.webdavdirectedit.properties</require>
+
+  <extension target="org.nuxeo.runtime.ConfigurationService" point="configuration">
+    <property name="nuxeo.labs.webdavDirectEdit.tokenAuth.enabled">false</property>
+  </extension>
+
+</component>

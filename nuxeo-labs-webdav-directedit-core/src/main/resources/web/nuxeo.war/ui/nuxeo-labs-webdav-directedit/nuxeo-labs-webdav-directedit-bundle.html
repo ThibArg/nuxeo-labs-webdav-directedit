@@ -1,0 +1,39 @@
+<!--
+(C) Copyright 2026 Hyland (http://hyland.com/) and others.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Contributors:
+    Thibaud Arguillere
+-->
+
+<link rel="import" href="nuxeo-labs-webdav-directedit.html">
+
+<!--
+  Register the "Open in Microsoft Office" button in the document actions.
+
+  This is a DOCUMENT action rather than a BLOB action on purpose. The WebDAV module exposes exactly one
+  file per document, the one returned by the document's BlobHolder: its whole API is DocumentModel-keyed
+  and carries no xpath, and a WebDAV PUT always lands on that same blob. Offering the button on an
+  attachment row would therefore let Microsoft Office edit one file and, on save, overwrite another.
+
+  The element itself decides whether to render, based on the document's main blob and on the configured
+  Microsoft Office formats.
+
+  Order 12 places the action just after Edit (10) and before Delete (15).
+-->
+<nuxeo-slot-content name="webdavDirectEditAction" slot="DOCUMENT_ACTIONS" order="12">
+  <template>
+    <nuxeo-labs-webdav-directedit document="[[document]]" user="[[user]]"></nuxeo-labs-webdav-directedit>
+  </template>
+</nuxeo-slot-content>

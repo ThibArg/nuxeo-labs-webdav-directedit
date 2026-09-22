@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.test.baseUrl">
+
+  <documentation>
+    Forces a stable, HTTPS base URL so the tests can assert on full URLs.
+  </documentation>
+
+  <require>nuxeo.labs.webdavdirectedit.properties</require>
+
+  <extension target="org.nuxeo.runtime.ConfigurationService" point="configuration">
+    <property name="nuxeo.labs.webdavDirectEdit.baseUrl">https://nuxeo.example.com/nuxeo</property>
+  </extension>
+
+</component>

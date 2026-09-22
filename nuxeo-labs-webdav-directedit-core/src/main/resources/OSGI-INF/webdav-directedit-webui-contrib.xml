@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.webui.contrib">
+
+  <documentation>
+    Deploys the Web UI resources for the WebDAV Direct Edit plugin.
+    @since 2025.1
+  </documentation>
+
+  <!-- Register the Web UI entry-point HTML as a web resource -->
+  <extension target="org.nuxeo.ecm.platform.WebResources" point="resources">
+    <resource name="nuxeo-labs-webdav-directedit-bundle.html" type="import">
+      <uri>/ui/nuxeo-labs-webdav-directedit/nuxeo-labs-webdav-directedit-bundle.html</uri>
+    </resource>
+  </extension>
+
+  <!-- Append our resource to the web-ui bundle so it gets loaded -->
+  <extension target="org.nuxeo.ecm.platform.WebResources" point="bundles">
+    <bundle name="web-ui">
+      <resources append="true">
+        <resource>nuxeo-labs-webdav-directedit-bundle.html</resource>
+      </resources>
+    </bundle>
+  </extension>
+
+</component>

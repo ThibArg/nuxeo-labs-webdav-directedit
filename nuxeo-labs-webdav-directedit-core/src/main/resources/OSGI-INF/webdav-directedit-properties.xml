@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="nuxeo.labs.webdavdirectedit.properties">
+
+  <documentation>
+    Runtime properties driving the WebDAV Direct Edit plugin.
+
+    Properties prefixed with "org.nuxeo.web.ui" are exposed to the Nuxeo Web UI through Nuxeo.UI.config
+    (see config.jsp). The server reads the very same properties, so the client and the server can never
+    disagree about which files are considered Microsoft Office documents.
+
+    Server-only properties use the "nuxeo.labs.webdavDirectEdit" prefix instead, so they are NOT shipped
+    to every browser.
+
+    @since 2025.1
+  </documentation>
+
+  <extension target="org.nuxeo.runtime.ConfigurationService" point="configuration">
+
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.enabled">true</property>
+
+    <!--
+      The blob WebDAV exposes. The module reads and writes only the blob returned by the document's
+      BlobHolder, which is file:content for File, Picture, Video and Audio. Change this only if a custom
+      blobHolderFactory maps your document types to another xpath.
+    -->
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.mainBlobXPath">file:content</property>
+
+    <!-- Microsoft Word -->
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.word.extensions">doc,docx,docm,dot,dotx,dotm,rtf</property>
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.word.mimeTypes">application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.wordprocessingml.template,application/vnd.ms-word.document.macroenabled.12,application/vnd.ms-word.template.macroenabled.12,application/rtf,text/rtf</property>
+
+    <!-- Microsoft Excel -->
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.excel.extensions">xls,xlsx,xlsm,xlsb,xlt,xltx,xltm,csv</property>
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.excel.mimeTypes">application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.spreadsheetml.template,application/vnd.ms-excel.sheet.macroenabled.12,application/vnd.ms-excel.template.macroenabled.12,application/vnd.ms-excel.sheet.binary.macroenabled.12,text/csv</property>
+
+    <!-- Microsoft PowerPoint -->
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.powerpoint.extensions">ppt,pptx,pptm,pps,ppsx,ppsm,pot,potx,potm</property>
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.powerpoint.mimeTypes">application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.presentationml.slideshow,application/vnd.openxmlformats-officedocument.presentationml.template,application/vnd.ms-powerpoint.presentation.macroenabled.12,application/vnd.ms-powerpoint.slideshow.macroenabled.12,application/vnd.ms-powerpoint.template.macroenabled.12</property>
+
+    <!--
+      Whether the dialog may show the user their authentication token, to be typed as the password in the
+      Microsoft Office sign-in prompt. Required on SSO-only deployments, where the user has no password.
+      Set to false to hide the whole sign-in help section.
+    -->
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.showCredentialsHelp">true</property>
+
+    <!--
+      Whether the dialog warns when the WebDAV URL is not HTTPS. On Windows the WebClient service refuses
+      to send Basic credentials over plain HTTP unless BasicAuthLevel is set to 2 in the registry.
+    -->
+    <property name="org.nuxeo.web.ui.webdavDirectEdit.warnOnInsecureUrl">true</property>
+
+    <!--
+      Server-only. Base URL used to build the WebDAV URLs, for example https://nuxeo.example.com/nuxeo.
+      When empty, nuxeo.url is used, unless it still points at localhost, in which case the URL the browser
+      is using is taken instead. Set this to force HTTPS when Nuxeo itself is reached over plain HTTP.
+    -->
+    <property name="nuxeo.labs.webdavDirectEdit.baseUrl"></property>
+
+    <!--
+      Server-only. Whether a Nuxeo authentication token is accepted in place of the password on
+      /nuxeo/site/officeedit. Set to false to allow passwords only.
+    -->
+    <property name="nuxeo.labs.webdavDirectEdit.tokenAuth.enabled">true</property>
+
+    <!--
+      Server-only. Whether the edit session token carried in the WebDAV URL authenticates the request, which is what
+      spares Microsoft Office a credentials prompt it cannot answer on an SSO-only deployment.
+
+      The URL is then a bearer credential: it is scoped to a single document and expires, but it is visible in
+      Office's recent files list and in the server access log. Set to false to require a credentials prompt instead,
+      in which case the user signs in with their password or with the token shown in the dialog.
+    -->
+    <property name="nuxeo.labs.webdavDirectEdit.capabilityUrl.enabled">true</property>
+
+    <!--
+      Server-only. How long the URL keeps AUTHENTICATING the request, in minutes of inactivity. Refreshed on every
+      request, so a document that stays open in Office never expires under the user.
+
+      Once this window lapses the address still designates its document, but no longer proves who is asking:
+      Microsoft Office falls back to a credentials prompt, and the document opens once it is answered. Raise this on
+      a demonstration machine to avoid being interrupted; note that on Windows over plain HTTP the prompt cannot be
+      answered at all, see the README.
+    -->
+    <property name="nuxeo.labs.webdavDirectEdit.capabilityUrl.ttlMinutes">480</property>
+
+    <!--
+      Server-only. Absolute lifetime of an edit address, in minutes from the moment it was issued. 30 days by
+      default, and deliberately NOT refreshed on use.
+
+      An issued address is a bearer credential that nothing else can revoke, so it must have a hard ceiling. Between
+      the authentication window above and this limit, the address still opens its document but asks for credentials.
+      Past this limit it is dead and the user clicks the button again.
+    -->
+    <property name="nuxeo.labs.webdavDirectEdit.session.ttlMinutes">43200</property>
+
+    <!--
+      Server-only. Largest body accepted on a single PUT, in megabytes. WebDAV has no partial write, so this is also
+      the largest document that can be edited through this endpoint.
+    -->
+    <property name="nuxeo.labs.webdavDirectEdit.maxUploadSizeMB">512</property>
+
+  </extension>
+
+</component>

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.operations">
+
+  <extension point="operations" target="org.nuxeo.ecm.core.operation.OperationServiceComponent">
+    <operation class="nuxeo.labs.webdav.directedit.GetDirectEditUrlOp" />
+    <operation class="nuxeo.labs.webdav.directedit.GetDirectEditCredentialsOp" />
+    <operation class="nuxeo.labs.webdav.directedit.RevokeDirectEditCredentialsOp" />
+  </extension>
+
+</component>

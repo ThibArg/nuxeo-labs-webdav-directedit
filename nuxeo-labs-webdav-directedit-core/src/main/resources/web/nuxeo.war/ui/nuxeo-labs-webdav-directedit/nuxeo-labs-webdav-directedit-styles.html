@@ -1,0 +1,152 @@
+<!--
+(C) Copyright 2026 Hyland (http://hyland.com/) and others.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Contributors:
+    Thibaud Arguillere
+-->
+
+<!--
+  Shared CSS styles for the WebDAV Direct Edit button and dialog.
+-->
+<dom-module id="nuxeo-labs-webdav-directedit-styles">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+      }
+
+      :host([hidden]) {
+        display: none !important;
+      }
+
+      nuxeo-dialog {
+        --nuxeo-dialog: {
+          top: 60px;
+          bottom: auto;
+          width: 50%;
+          max-width: 620px;
+        };
+      }
+
+      .opening {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0;
+        font-size: 14px;
+        color: var(--nuxeo-text-default, #3a3a54);
+      }
+
+      .opening iron-icon {
+        --iron-icon-height: 22px;
+        --iron-icon-width: 22px;
+        color: var(--nuxeo-primary-color, #0066ff);
+        flex-shrink: 0;
+      }
+
+      .hint {
+        font-size: 13px;
+        color: var(--nuxeo-text-light, #939caa);
+        margin: 6px 0;
+      }
+
+      .manual-link {
+        display: inline-block;
+        margin: 4px 0 12px;
+        font-size: 13px;
+        color: var(--nuxeo-link-color, #0066ff);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .field {
+        margin: 12px 0;
+      }
+
+      .field-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--nuxeo-text-light, #939caa);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .field-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .field-row input {
+        flex: 1;
+        min-width: 0;
+        font-family: monospace;
+        font-size: 12px;
+        padding: 7px 8px;
+        border: 1px solid var(--nuxeo-border, #e3e3e3);
+        border-radius: 3px;
+        background: var(--nuxeo-page-background, #fafafa);
+        color: var(--nuxeo-text-default, #3a3a54);
+        box-sizing: border-box;
+      }
+
+      .warning-message {
+        background: var(--nuxeo-warn-background, #fff6e0);
+        border-left: 4px solid var(--nuxeo-warn-text, #ffad4e);
+        padding: 10px 12px;
+        margin: 12px 0;
+        font-size: 13px;
+        color: var(--nuxeo-text-default, #3a3a54);
+      }
+
+      .error-message {
+        background: var(--nuxeo-error-background, #fdeaea);
+        border-left: 4px solid var(--nuxeo-error-text, #d9584a);
+        padding: 10px 12px;
+        margin: 12px 0;
+        font-size: 13px;
+        color: var(--nuxeo-text-default, #3a3a54);
+      }
+
+      .credentials {
+        border-top: 1px solid var(--nuxeo-border, #e3e3e3);
+        margin-top: 16px;
+        padding-top: 12px;
+      }
+
+      .credentials-toggle {
+        font-size: 13px;
+        color: var(--nuxeo-link-color, #0066ff);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .revoke-link {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--nuxeo-error-text, #d9584a);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+
+      .buttons {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 8px;
+      }
+    </style>
+  </template>
+</dom-module>

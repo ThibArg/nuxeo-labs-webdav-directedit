@@ -1,0 +1,15 @@
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: .
+Manifest-Version: 1.0
+Bundle-Vendor: nuxeo.labs.webdavdirectedit
+Bundle-Version: 2025.1.0
+Bundle-Name: nuxeo-labs-webdav-directedit-core
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: nuxeo.labs.webdavdirectedit.nuxeo-labs-webdav-directedit-core;singleton=true
+Nuxeo-Component: OSGI-INF/webdav-directedit-properties.xml,
+ OSGI-INF/webdav-directedit-transientstore-contrib.xml,
+ OSGI-INF/webdav-directedit-service.xml,
+ OSGI-INF/webdav-directedit-operations.xml,
+ OSGI-INF/webdav-directedit-auth-contrib.xml,
+ OSGI-INF/webdav-directedit-requestcontroller-contrib.xml,
+ OSGI-INF/webdav-directedit-webui-contrib.xml

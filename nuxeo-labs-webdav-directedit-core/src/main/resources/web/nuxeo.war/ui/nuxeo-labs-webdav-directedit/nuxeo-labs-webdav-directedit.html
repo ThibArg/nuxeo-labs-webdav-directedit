@@ -1,0 +1,520 @@
+<!--
+(C) Copyright 2026 Hyland (http://hyland.com/) and others.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Contributors:
+    Thibaud Arguillere
+-->
+
+<link rel="import" href="nuxeo-labs-webdav-directedit-styles.html">
+
+<!--
+  Opens the current document in the matching Microsoft Office desktop application, over WebDAV.
+
+  The button is shown only when the document carries a Microsoft Office file. That decision is made
+  from the org.nuxeo.web.ui.webdavDirectEdit.* runtime properties, which are the very same properties
+  the server reads, so the client and the server can never disagree.
+
+  Clicking calls WebDavDirectEdit.GetUrl, which is authoritative: it verifies the xpath really is the
+  document's main blob, that the document is editable, and that the user may write it.
+-->
+<dom-module id="nuxeo-labs-webdav-directedit">
+  <template>
+    <style include="nuxeo-styles nuxeo-action-button-styles nuxeo-button-styles nuxeo-labs-webdav-directedit-styles">
+    </style>
+
+    <nuxeo-operation id="getUrlOp" op="WebDavDirectEdit.GetUrl"></nuxeo-operation>
+    <nuxeo-operation id="getCredentialsOp" op="WebDavDirectEdit.GetCredentials"></nuxeo-operation>
+    <nuxeo-operation id="revokeCredentialsOp" op="WebDavDirectEdit.RevokeCredentials"></nuxeo-operation>
+
+    <!-- The action button -->
+    <template is="dom-if" if="[[_isAvailable(document, xpath)]]">
+      <div class="action" on-click="_open">
+        <paper-icon-button id="directEditBtn" icon="icons:launch" noink aria-labelledby="directEditLabel">
+        </paper-icon-button>
+        <span class="label" hidden$="[[!showLabel]]" id="directEditLabel">[[_tooltip]]</span>
+        <nuxeo-tooltip for="directEditBtn">[[_tooltip]]</nuxeo-tooltip>
+      </div>
+    </template>
+
+    <!-- The dialog -->
+    <nuxeo-dialog id="dialog" with-backdrop no-auto-focus on-iron-overlay-closed="_onDialogClosed">
+      <h2>[[i18n('webdavDirectEdit.dialog.title')]]</h2>
+
+      <!-- Preparing -->
+      <template is="dom-if" if="[[_loading]]">
+        <div class="opening">
+          <paper-spinner-lite active></paper-spinner-lite>
+          <span>[[i18n('webdavDirectEdit.dialog.preparing')]]</span>
+        </div>
+      </template>
+
+      <!-- Success -->
+      <template is="dom-if" if="[[_info.available]]">
+        <div class="opening">
+          <iron-icon icon="icons:launch"></iron-icon>
+          <span>[[i18n('webdavDirectEdit.dialog.opening', _info.fileName, _appLabel)]]</span>
+        </div>
+
+        <!--
+          A real anchor, so the user always has a genuine gesture to fall back on if the browser
+          refused the programmatic launch fired right after the operation resolved.
+        -->
+        <a class="manual-link" href$="[[_info.protocolUrl]]">
+          [[i18n('webdavDirectEdit.dialog.openManually', _appLabel)]]
+        </a>
+
+        <div class="hint">[[i18n('webdavDirectEdit.dialog.hint', _appLabel)]]</div>
+        <div class="hint">[[i18n('webdavDirectEdit.dialog.lockHint', _appLabel)]]</div>
+
+        <template is="dom-if" if="[[_showInsecureWarning]]">
+          <div class="warning-message">[[i18n('webdavDirectEdit.dialog.insecure')]]</div>
+        </template>
+
+        <div class="field">
+          <div class="field-label">[[i18n('webdavDirectEdit.dialog.url')]]</div>
+          <div class="field-row">
+            <input id="davUrlField" type="text" readonly value="[[_info.davUrl]]" on-click="_selectAll">
+            <paper-button class="text" on-tap="_copyUrl">[[i18n('webdavDirectEdit.dialog.copy')]]</paper-button>
+          </div>
+          <div class="hint">[[i18n('webdavDirectEdit.dialog.urlHint', _appLabel)]]</div>
+        </div>
+
+        <!-- Sign-in help: the only way to authenticate Office on an SSO-only deployment -->
+        <template is="dom-if" if="[[_credentialsHelpEnabled]]">
+          <div class="credentials">
+            <template is="dom-if" if="[[!_credentialsExpanded]]">
+              <span class="credentials-toggle" on-tap="_showCredentials">
+                [[i18n('webdavDirectEdit.credentials.toggle')]]
+              </span>
+            </template>
+
+            <template is="dom-if" if="[[_credentialsExpanded]]">
+              <div class="hint">[[i18n('webdavDirectEdit.credentials.intro')]]</div>
+
+              <template is="dom-if" if="[[_credentials.token]]">
+                <div class="field">
+                  <div class="field-label">[[i18n('webdavDirectEdit.credentials.username')]]</div>
+                  <div class="field-row">
+                    <input id="usernameField" type="text" readonly value="[[_credentials.username]]"
+                           on-click="_selectAll">
+                    <paper-button class="text" on-tap="_copyUsername">
+                      [[i18n('webdavDirectEdit.dialog.copy')]]
+                    </paper-button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <div class="field-label">[[i18n('webdavDirectEdit.credentials.token')]]</div>
+                  <div class="field-row">
+                    <input id="tokenField" type="text" readonly value="[[_credentials.token]]" on-click="_selectAll">
+                    <paper-button class="text" on-tap="_copyToken">
+                      [[i18n('webdavDirectEdit.dialog.copy')]]
+                    </paper-button>
+                  </div>
+                </div>
+
+                <div class="warning-message">[[i18n('webdavDirectEdit.credentials.warning')]]</div>
+                <span class="revoke-link" on-tap="_revokeCredentials">
+                  [[i18n('webdavDirectEdit.credentials.revoke')]]
+                </span>
+              </template>
+            </template>
+          </div>
+        </template>
+      </template>
+
+      <!-- Failure -->
+      <template is="dom-if" if="[[_errorMessage]]">
+        <div class="error-message">[[_errorMessage]]</div>
+      </template>
+
+      <div class="buttons">
+        <paper-button dialog-dismiss>[[i18n('webdavDirectEdit.dialog.close')]]</paper-button>
+      </div>
+    </nuxeo-dialog>
+
+    <paper-toast id="toast"></paper-toast>
+  </template>
+
+  <script>
+    (function() {
+      'use strict';
+
+      var APPS = ['word', 'excel', 'powerpoint'];
+
+      /* ==================== Runtime configuration ==================== */
+
+      /**
+       * Reads a runtime property exposed to the Web UI. The server reads the same property, under its
+       * full org.nuxeo.web.ui. prefix.
+       */
+      function config(key, defaultValue) {
+        var cfg = window.Nuxeo && Nuxeo.UI && Nuxeo.UI.config;
+        if (cfg && typeof cfg.get === 'function') {
+          var value = cfg.get('webdavDirectEdit.' + key, defaultValue);
+          return value === undefined || value === null ? defaultValue : value;
+        }
+        return defaultValue;
+      }
+
+      function isFalse(value) {
+        return String(value).toLowerCase() === 'false';
+      }
+
+      /** Splits a comma-separated configuration list into a lower-case array. */
+      function configList(key) {
+        return String(config(key, ''))
+          .split(',')
+          .map(function(entry) {
+            return entry.trim().toLowerCase();
+          })
+          .filter(Boolean);
+      }
+
+      function extensionOf(fileName) {
+        if (!fileName) {
+          return '';
+        }
+        var dot = fileName.lastIndexOf('.');
+        if (dot < 0 || dot === fileName.length - 1) {
+          return '';
+        }
+        return fileName.substring(dot + 1).toLowerCase();
+      }
+
+      Polymer({
+        is: 'nuxeo-labs-webdav-directedit',
+
+        behaviors: [Nuxeo.I18nBehavior, Nuxeo.FiltersBehavior],
+
+        properties: {
+          document: Object,
+
+          user: Object,
+
+          /**
+           * Blob xpath. Only the document's main blob can be served over WebDAV, so this defaults to the
+           * configured main blob xpath. Override it only if a custom blobHolderFactory maps your document
+           * types elsewhere; the server re-checks it anyway.
+           */
+          xpath: {
+            type: String,
+            value: function() {
+              return config('mainBlobXPath', 'file:content');
+            }
+          },
+
+          /** Set by nuxeo-actions-menu when the action overflows into the dropdown. */
+          showLabel: {
+            type: Boolean,
+            reflectToAttribute: true,
+            value: false
+          },
+
+          _loading: {
+            type: Boolean,
+            value: false
+          },
+
+          _info: {
+            type: Object,
+            value: function() {
+              return {};
+            }
+          },
+
+          _appLabel: {
+            type: String,
+            value: ''
+          },
+
+          _tooltip: {
+            type: String,
+            computed: '_computeTooltip(document, xpath, i18n)'
+          },
+
+          _errorMessage: {
+            type: String,
+            value: ''
+          },
+
+          _showInsecureWarning: {
+            type: Boolean,
+            value: false
+          },
+
+          _credentialsHelpEnabled: {
+            type: Boolean,
+            value: false
+          },
+
+          _credentialsExpanded: {
+            type: Boolean,
+            value: false
+          },
+
+          _credentials: {
+            type: Object,
+            value: function() {
+              return {};
+            }
+          }
+        },
+
+        /* ==================== Availability ==================== */
+
+        /** Returns the blob at the configured xpath, or null. */
+        _blob: function(doc, xpath) {
+          if (!doc || !doc.properties || !xpath) {
+            return null;
+          }
+          var parts = xpath.split('/');
+          var value = doc.properties;
+          for (var i = 0; i < parts.length; i++) {
+            if (!value || (Array.isArray(value) && value.length === 0)) {
+              return null;
+            }
+            value = value[parts[i]];
+          }
+          return value || null;
+        },
+
+        /** Returns the Office application able to open the blob, or an empty string. */
+        _resolveApp: function(blob) {
+          if (!blob) {
+            return '';
+          }
+          var i;
+          // The mime type wins when it is known; "???" is the sentinel the server uses when it could not decide.
+          var mimeType = (blob['mime-type'] || '').trim().toLowerCase();
+          if (mimeType && mimeType !== '???') {
+            for (i = 0; i < APPS.length; i++) {
+              if (configList(APPS[i] + '.mimeTypes').indexOf(mimeType) > -1) {
+                return APPS[i];
+              }
+            }
+          }
+          var extension = extensionOf(blob.name);
+          if (extension) {
+            for (i = 0; i < APPS.length; i++) {
+              if (configList(APPS[i] + '.extensions').indexOf(extension) > -1) {
+                return APPS[i];
+              }
+            }
+          }
+          return '';
+        },
+
+        _isAvailable: function(doc, xpath) {
+          if (isFalse(config('enabled', true)) || !doc) {
+            return false;
+          }
+          // Office locks then saves back, so read-only access would only fail after the user made changes.
+          if (!this.hasPermission(doc, 'Write') || this.isProxy(doc) || this.isTrashed(doc) || this.isVersion(doc)) {
+            return false;
+          }
+          return !!this._resolveApp(this._blob(doc, xpath));
+        },
+
+        _computeTooltip: function(doc, xpath) {
+          var app = this._resolveApp(this._blob(doc, xpath));
+          return app ? this.i18n('webdavDirectEdit.action.tooltip.' + app)
+                     : this.i18n('webdavDirectEdit.action.tooltip');
+        },
+
+        /* ==================== Open ==================== */
+
+        _open: function() {
+          var self = this;
+          this._reset();
+          this._loading = true;
+          this.$.dialog.open();
+
+          var op = this.$.getUrlOp;
+          op.input = this.document.uid;
+          op.params = {
+            xpath: this.xpath,
+            // Best guess for the server, used only when it has no configured base URL of its own.
+            baseUrl: this._browserBaseUrl()
+          };
+
+          op.execute().then(function(result) {
+            self._loading = false;
+            var info = self._parse(result);
+            if (!info) {
+              self._errorMessage = self.i18n('webdavDirectEdit.error.unknown');
+              return;
+            }
+            if (!info.available) {
+              self._errorMessage = self._errorFor(info);
+              return;
+            }
+            self._info = info;
+            self._appLabel = self.i18n('webdavDirectEdit.action.tooltip.' + info.app);
+            self._showInsecureWarning = !info.secure && !isFalse(config('warnOnInsecureUrl', true));
+            self._credentialsHelpEnabled = !isFalse(config('showCredentialsHelp', true));
+            self._launch(info.protocolUrl);
+          }).catch(function(error) {
+            self._loading = false;
+            self._errorMessage = self.i18n('webdavDirectEdit.error.unknown');
+            console.error('[nuxeo-labs-webdav-directedit] Could not compute the WebDAV URL', error);
+          });
+        },
+
+        /**
+         * Hands the URL to the operating system.
+         *
+         * A detached anchor click is used rather than window.location: browsers silently ignore an
+         * anchor click on an unregistered scheme, whereas assigning location raises a navigation error
+         * when Microsoft Office is not installed. The dialog stays open behind the native prompt and
+         * offers a real link, so the user is never stuck.
+         */
+        _launch: function(protocolUrl) {
+          try {
+            var anchor = window.document.createElement('a');
+            anchor.href = protocolUrl;
+            anchor.click();
+          } catch (error) {
+            console.warn('[nuxeo-labs-webdav-directedit] Could not launch the Office protocol handler', error);
+          }
+        },
+
+        _errorFor: function(info) {
+          var key = 'webdavDirectEdit.error.' + (info.reason || 'unknown');
+          var message = this.i18n(key, info.fileName || '');
+          // i18n returns the key itself when it is unknown, which would be meaningless to the user.
+          return message === key ? this.i18n('webdavDirectEdit.error.unknown') : message;
+        },
+
+        /* ==================== Sign-in credentials ==================== */
+
+        _showCredentials: function() {
+          var self = this;
+          this._credentialsExpanded = true;
+          this.$.getCredentialsOp.execute().then(function(result) {
+            var credentials = self._parse(result);
+            if (credentials && credentials.enabled && credentials.token) {
+              self._credentials = credentials;
+            } else {
+              // Disabled server-side: collapse rather than leave an empty section open.
+              self._credentialsExpanded = false;
+              self._credentialsHelpEnabled = false;
+            }
+          }).catch(function(error) {
+            self._credentialsExpanded = false;
+            self._notify(self.i18n('webdavDirectEdit.credentials.failed'));
+            console.error('[nuxeo-labs-webdav-directedit] Could not acquire a token', error);
+          });
+        },
+
+        _revokeCredentials: function() {
+          var self = this;
+          this.$.revokeCredentialsOp.execute().then(function() {
+            self._credentials = {};
+            self._credentialsExpanded = false;
+            self._notify(self.i18n('webdavDirectEdit.credentials.revoked'));
+          }).catch(function(error) {
+            console.error('[nuxeo-labs-webdav-directedit] Could not revoke the token', error);
+          });
+        },
+
+        /* ==================== Helpers ==================== */
+
+        /**
+         * Clears everything, in particular the account token and the WebDAV address.
+         *
+         * The address is not merely informative: it carries the edit session token, which authenticates the
+         * request. It is scoped to this one document and it expires, but it is still a credential and must not
+         * linger in the DOM once the dialog is closed.
+         */
+        _onDialogClosed: function() {
+          this._reset();
+        },
+
+        _reset: function() {
+          this._info = {};
+          this._appLabel = '';
+          this._errorMessage = '';
+          this._showInsecureWarning = false;
+          this._credentialsExpanded = false;
+          this._credentialsHelpEnabled = false;
+          this._credentials = {};
+        },
+
+        /**
+         * Operations return a JSON blob. nuxeo-operation resolves to the parsed object when the response is
+         * application/json, and to the raw text otherwise.
+         */
+        _parse: function(result) {
+          if (!result) {
+            return null;
+          }
+          if (typeof result === 'string') {
+            try {
+              return JSON.parse(result);
+            } catch (error) {
+              console.error('[nuxeo-labs-webdav-directedit] Unexpected non-JSON response', error);
+              return null;
+            }
+          }
+          return typeof result === 'object' ? result : null;
+        },
+
+        _browserBaseUrl: function() {
+          var base = (window.nuxeo && window.nuxeo.baseUrl) || window.location.origin + window.location.pathname;
+          return String(base).split('/ui/')[0].replace(/\/$/, '');
+        },
+
+        _selectAll: function(event) {
+          event.target.select();
+        },
+
+        _copyUrl: function() {
+          this._copy(this._info.davUrl);
+        },
+
+        _copyUsername: function() {
+          this._copy(this._credentials.username);
+        },
+
+        _copyToken: function() {
+          this._copy(this._credentials.token);
+        },
+
+        _copy: function(text) {
+          var self = this;
+          if (!text) {
+            return;
+          }
+          // Never echo the value in the toast: it may be the account token, and the toast is application-wide.
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function() {
+              self._notify(self.i18n('webdavDirectEdit.dialog.copied'));
+            }).catch(function() {
+              self._notify(self.i18n('webdavDirectEdit.dialog.copyFailed'));
+            });
+          } else {
+            self._notify(self.i18n('webdavDirectEdit.dialog.copyFailed'));
+          }
+        },
+
+        _notify: function(message) {
+          this.$.toast.text = message;
+          this.$.toast.open();
+        }
+      });
+    })();
+  </script>
+</dom-module>

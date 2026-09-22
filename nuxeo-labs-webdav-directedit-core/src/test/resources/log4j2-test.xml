@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<configuration>
+  <appenders>
+    <Console name="CONSOLE" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{HH:mm:ss,SSS} %-5p [%C{1}] %m%n" />
+    </Console>
+  </appenders>
+  <loggers>
+    <root level="warn">
+      <appender-ref ref="CONSOLE" />
+    </root>
+    <logger name="nuxeo.labs.webdav.directedit" level="debug" />
+  </loggers>
+</configuration>

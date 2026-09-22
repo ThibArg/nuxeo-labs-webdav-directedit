@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.test.servletcontainer">
+
+  <documentation>
+    Runs the Office Edit servlet inside the embedded Tomcat that ServletContainerFeature starts, on the same URL
+    shape it has in production, so getServletPath() and every path computation behave identically.
+
+    Only the two filters the servlet actually needs are mapped. In production these come from the /site/* mappings
+    declared by nuxeo-webengine-core; here they have to be declared, because no web.xml is involved.
+
+    Declaration order is filter chain order, and it matters: authentication has to establish the login context
+    before NuxeoRequestController opens the transaction the servlet runs in.
+
+    @since 2025.1
+  </documentation>
+
+  <!--
+    The require on defaultConfig must be DIRECT. Requiring it only transitively, through our own auth component,
+    does not order extension registration, and the platform's default chain then overwrites ours below.
+  -->
+  <require>org.nuxeo.ecm.platform.ui.web.auth.defaultConfig</require>
+  <require>nuxeo.labs.webdavdirectedit.auth.config</require>
+
+  <extension target="org.nuxeo.runtime.server" point="servlet">
+    <servlet context="/">
+      <servlet-name>Nuxeo Labs Office Edit Servlet</servlet-name>
+      <servlet-class>nuxeo.labs.webdav.directedit.server.OfficeEditServlet</servlet-class>
+      <url-pattern>/site/officeedit/*</url-pattern>
+    </servlet>
+  </extension>
+
+  <extension target="org.nuxeo.runtime.server" point="filter">
+    <filter context="/">
+      <filter-name>NuxeoAuthenticationFilter</filter-name>
+      <filter-class>org.nuxeo.ecm.platform.ui.web.auth.NuxeoAuthenticationFilter</filter-class>
+      <display-name>Nuxeo Authentication Filter</display-name>
+      <filter-mapping>
+        <url-pattern>/site/officeedit/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+      </filter-mapping>
+    </filter>
+
+    <filter context="/">
+      <filter-name>NuxeoRequestController</filter-name>
+      <filter-class>org.nuxeo.ecm.platform.web.common.requestcontroller.filter.NuxeoRequestControllerFilter</filter-class>
+      <display-name>Nuxeo Request Controller</display-name>
+      <filter-mapping>
+        <url-pattern>/site/officeedit/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+      </filter-mapping>
+    </filter>
+  </extension>
+
+  <!--
+    The production contribution keys its pattern off ${org.nuxeo.ecm.contextPath}, which is not the context path the
+    embedded container uses. RequestControllerService denies by default when nothing matches, so the pattern is
+    restated here for the test context.
+  -->
+  <extension target="org.nuxeo.ecm.platform.web.common.requestcontroller.service.RequestControllerService"
+      point="filterConfig">
+    <filterConfig name="NuxeoLabsOfficeEditTest" transactional="true" synchonize="false">
+      <pattern>/site/officeedit.*</pattern>
+    </filterConfig>
+  </extension>
+  <!--
+    NuxeoAuthenticationFilter.initUnAuthenticatedURLPrefix walks the DEFAULT chain, not the specific one our URL
+    selects, and throws if any plugin in it is missing. The platform default chain names OAUTH2_AUTH, which this
+    test does not deploy. Worse, the filter assigns its cache before it throws, so only the very first request of
+    the run would fail and every later one would pass: a latent, order-dependent failure. Narrowing the default
+    chain to a plugin that certainly exists removes it.
+  -->
+  <extension target="org.nuxeo.ecm.platform.ui.web.auth.service.PluggableAuthenticationService" point="chain">
+    <authenticationChain>
+      <plugins>
+        <plugin>NUXEO_LABS_OFFICEEDIT_BASIC_AUTH</plugin>
+      </plugins>
+    </authenticationChain>
+  </extension>
+
+</component>

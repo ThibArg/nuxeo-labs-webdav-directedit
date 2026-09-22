@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.requestcontroller">
+
+  <documentation>
+    Makes the WebDAV endpoint transactional.
+
+    The webengine contribution already declares ${org.nuxeo.ecm.contextPath}/site.* as transactional, which covers
+    this endpoint. It is restated here explicitly and more specifically so the behaviour does not depend on another
+    bundle's pattern, since RequestControllerService denies by default when nothing matches.
+
+    synchonize is false, and spelled that way on purpose: that is the attribute name FilterConfigDescriptor declares.
+
+    @since 2025.1
+  </documentation>
+
+  <extension
+      target="org.nuxeo.ecm.platform.web.common.requestcontroller.service.RequestControllerService"
+      point="filterConfig">
+    <filterConfig name="NuxeoLabsOfficeEdit" transactional="true" synchonize="false">
+      <pattern>${org.nuxeo.ecm.contextPath}/site/officeedit.*</pattern>
+    </filterConfig>
+  </extension>
+
+</component>

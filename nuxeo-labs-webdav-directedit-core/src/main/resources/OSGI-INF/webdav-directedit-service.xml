@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.WebDavDirectEditService" version="1.0">
+
+  <documentation>
+    WebDAV Direct Edit service.
+
+    There is deliberately no extension point: the Office format lists, the main blob xpath and the feature
+    flag all come from the org.nuxeo.web.ui.webdavDirectEdit.* configuration properties
+    (see webdav-directedit-properties.xml), which is the exact same source the Web UI client reads. This
+    guarantees the client and the server can never disagree about which documents show the button.
+
+    @since 2025.1
+  </documentation>
+
+  <require>nuxeo.labs.webdavdirectedit.properties</require>
+
+  <implementation class="nuxeo.labs.webdav.directedit.WebDavDirectEditServiceImpl" />
+
+  <service>
+    <provide interface="nuxeo.labs.webdav.directedit.WebDavDirectEditService" />
+  </service>
+
+</component>

@@ -1,0 +1,28 @@
+<!-- See documentation at http://doc.nuxeo.com/x/HgIz -->
+<package type="addon" name="nuxeo-labs-webdav-directedit" version="@VERSION@">
+  <title>Nuxeo Labs WebDAV Direct Edit</title>
+  <description>
+    <p>Adds a button to the Nuxeo Web UI that opens the current document directly in Microsoft Word,
+    Excel or PowerPoint, using the WebDAV protocol. Edits saved from the Office application are sent
+    back to Nuxeo and update the document.</p>
+    <p>The button is only shown when the document has a main file whose mime type or file name
+    matches a Microsoft Office format.</p>
+    <p>Self-contained: the plugin provides its own WebDAV endpoint and requires no other addon.</p>
+  </description>
+  <vendor>Hyland</vendor>
+  <installer restart="true" />
+  <uninstaller restart="true" />
+  <nuxeo-validation>none</nuxeo-validation>
+  <production-state>testing</production-state>
+  <supported>false</supported>
+  <target-platform>
+    <name>lts</name>
+    <version>[@NUXEO_TARGET_VERSION@,)</version>
+  </target-platform>
+  <dependencies>
+    <package>nuxeo-web-ui</package>
+  </dependencies>
+  <license>Apache License, Version 2.0</license>
+  <license-url>http://www.apache.org/licenses/LICENSE-2.0</license-url>
+  <visibility>DEV</visibility>
+</package>

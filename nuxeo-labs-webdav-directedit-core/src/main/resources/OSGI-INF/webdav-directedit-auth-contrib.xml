@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.auth.config">
+
+  <documentation>
+    Authentication for the Office Edit WebDAV endpoint.
+
+    Microsoft Office drives WebDAV with its own HTTP stack. It has no browser, cannot follow an identity provider
+    redirect, and supports only Basic and Digest. On an SSO-only deployment the user therefore has no password to
+    type into its credentials prompt. Two plugins cover that, in order:
+
+    1. NUXEO_LABS_OFFICEEDIT_CAPABILITY_AUTH authenticates from the edit session token carried in the URL, so no
+       prompt appears at all. This is the normal path, and the same shape nuxeo-wopi uses for Office Online.
+    2. NUXEO_LABS_OFFICEEDIT_BASIC_AUTH prompts, and accepts either a real password or a Nuxeo authentication
+       token as the password. It is the fallback when a session has expired.
+
+    AutoPrompt=true on the second is what makes the server answer 401 with a WWW-Authenticate header rather than
+    redirecting to the login page, which is the only thing Office understands.
+
+    The replacementChain discards the default chain entirely, which is the point: OIDC and SAML plugins are never
+    invoked for these URLs, so Office can never be sent an identity provider redirect. ANONYMOUS_AUTH is excluded
+    for the same reason, so enabling anonymous access server-wide does not open this endpoint.
+
+    The chain deliberately does NOT select on the User-Agent header. The platform's own WebDAV addon does that, and
+    such a chain carries no URL scoping at all, so it applies to every request a WebDAV-looking client makes
+    anywhere in Nuxeo.
+
+    Set nuxeo.labs.webdavDirectEdit.capabilityUrl.enabled to false to require a credentials prompt, and
+    nuxeo.labs.webdavDirectEdit.tokenAuth.enabled to false to accept passwords only.
+
+    @since 2025.1
+  </documentation>
+
+  <require>org.nuxeo.ecm.platform.ui.web.auth.defaultConfig</require>
+
+  <extension target="org.nuxeo.ecm.platform.ui.web.auth.service.PluggableAuthenticationService"
+      point="authenticators">
+    <authenticationPlugin name="NUXEO_LABS_OFFICEEDIT_CAPABILITY_AUTH" enabled="true"
+        class="nuxeo.labs.webdav.directedit.auth.OfficeEditCapabilityAuthenticator" />
+    <authenticationPlugin name="NUXEO_LABS_OFFICEEDIT_BASIC_AUTH" enabled="true"
+        class="nuxeo.labs.webdav.directedit.auth.WebDavTokenBasicAuthenticator">
+      <parameters>
+        <parameter name="AutoPrompt">true</parameter>
+        <parameter name="RealmName">Nuxeo Office Edit</parameter>
+      </parameters>
+    </authenticationPlugin>
+  </extension>
+
+  <extension target="org.nuxeo.ecm.platform.ui.web.auth.service.PluggableAuthenticationService"
+      point="specificChains">
+    <specificAuthenticationChain name="NuxeoLabsOfficeEdit">
+      <urlPatterns>
+        <!--
+          Matched with Matcher.matches(), so the pattern has to cover the whole request URI. The optional group is
+          required: without it the mount point with no trailing slash falls through to the default chain, and an SSO
+          deployment would answer Word with a redirect to its identity provider.
+        -->
+        <url>(.*)/site/officeedit(/.*)?</url>
+      </urlPatterns>
+      <replacementChain>
+        <plugin>NUXEO_LABS_OFFICEEDIT_CAPABILITY_AUTH</plugin>
+        <plugin>NUXEO_LABS_OFFICEEDIT_BASIC_AUTH</plugin>
+      </replacementChain>
+    </specificAuthenticationChain>
+  </extension>
+
+</component>

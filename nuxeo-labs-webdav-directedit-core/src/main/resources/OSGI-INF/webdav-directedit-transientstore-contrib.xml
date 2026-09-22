@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.transientstore">
+
+  <documentation>
+    Scratch space for the temporary files Microsoft Office creates while it saves.
+
+    Office does not save with a single PUT. It writes the new content to a .tmp file, moves the original aside,
+    moves the temporary file onto the original name and deletes the leftover. It also keeps a ~$ owner file for the
+    whole editing session. None of those are documents, and none of them belong in the repository: the platform's
+    own WebDAV module creates them as real documents and deletes them afterwards, which is why they flash by in the
+    Web UI. Here they live in this transient store instead and expire on their own.
+
+    Entries are small and short-lived: the save dance takes seconds, and only the owner file lasts the session.
+
+    @since 2025.1
+  </documentation>
+
+  <require>org.nuxeo.ecm.core.transientstore.TransientStorageComponent</require>
+
+  <extension target="org.nuxeo.ecm.core.transientstore.TransientStorageComponent" point="store">
+    <store name="officeEditScratch">
+      <!--
+        Bounded on purpose. Without these the store is unlimited, and a single authenticated user could fill the
+        disk one temporary file at a time. Past absoluteMaxSize the store throws, which the servlet answers with
+        507 Insufficient Storage rather than a 500.
+      -->
+      <targetMaxSize>2GB</targetMaxSize>
+      <absoluteMaxSize>4GB</absoluteMaxSize>
+      <!-- Generous enough for an editing session, short enough that abandoned entries do not accumulate. -->
+      <firstLevelTTL>240</firstLevelTTL>
+      <secondLevelTTL>10</secondLevelTTL>
+    </store>
+  </extension>
+
+</component>

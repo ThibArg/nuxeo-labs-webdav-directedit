@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<component name="nuxeo.labs.webdavdirectedit.test.smallUploadLimit">
+
+  <documentation>
+    Lowers the upload ceiling so a test can reach it without moving hundreds of megabytes.
+  </documentation>
+
+  <require>nuxeo.labs.webdavdirectedit.properties</require>
+
+  <extension target="org.nuxeo.runtime.ConfigurationService" point="configuration">
+    <property name="nuxeo.labs.webdavDirectEdit.maxUploadSizeMB">1</property>
+  </extension>
+
+</component>
