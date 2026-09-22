@@ -29,7 +29,6 @@ bin/
 *-bak
 *.bak
 .opencode
-AGENTS.md
 
 # Accidental shell redirect target
 dev_null
