@@ -182,8 +182,12 @@ sign Office in transparently. This is a deployment-level setup, outside the scop
 
 ### Windows
 
-The Windows `WebClient` service refuses to send Basic credentials over a plain HTTP connection by
-default. The relevant registry value is:
+Two things bite on Windows, and it is worth separating what the plugin controls from what it does not.
+
+#### Basic credentials over plain HTTP
+
+The `WebClient` service refuses to **send** Basic credentials over an unencrypted connection by
+default:
 
 ```
 HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters\BasicAuthLevel
@@ -192,16 +196,59 @@ HKLM\SYSTEM\CurrentControlSet\Services\WebClient\Parameters\BasicAuthLevel
     2 = Basic authentication enabled for SSL and non-SSL shares
 ```
 
-**Use HTTPS.** Changing the registry on every workstation is not a reasonable alternative. The dialog
-warns when the address it built is not HTTPS.
+**Use HTTPS.** Changing the registry on every workstation is not a reasonable alternative. Note that
+while the address still authenticates on its own, no credentials are sent at all and this does not
+apply — it only bites once Office has to prompt. The dialog warns when the address is not HTTPS.
 
-Office opens the file in **Protected View** first; the user has to click *Enable Editing*. This is
-visible in the request log: Word locks the document, reads it, then **releases the lock** and waits.
-Between 10 and 45 seconds elapsed in the sessions measured — the time it takes someone to click.
+#### The two security prompts, and their single cause
 
-The consequence is worth knowing: **during that pause the document is unlocked in Nuxeo**, so another
-user can take it. Nothing in the plugin can prevent this; it is the client that releases the lock.
-Adding the Nuxeo host to the Trusted Sites zone removes the Protected View step, and with it the pause.
+Users on Windows see two warnings that do not appear on macOS. **Neither can be suppressed from the
+server; no HTTP header influences either.** Both come from the same place: the Nuxeo host sits in the
+**Internet zone**.
+
+**1. When clicking the button**, Windows asks for confirmation before launching Word:
+
+> Some files contain viruses that can be harmful to your computer… Do you want to open this file?
+> Program: Microsoft Word
+
+This is the shell warning for launching an external application from a browser. It is governed by the
+zone setting *Launching applications and unsafe files*, which defaults to **Prompt** in the Internet
+zone and to **Enable** in Trusted sites.
+
+**2. Once Word opens**, a banner appears:
+
+> PROTECTED VIEW — Be careful, files from the Internet can contain viruses…
+
+Microsoft's own documentation gives this exact wording and its cause: *the file is being opened from
+the Internet*.
+
+#### The fix: put the Nuxeo host in a trusted zone
+
+One change addresses both. On a managed estate, use the Group Policy **Site to Zone Assignment List**
+to map the Nuxeo host to *Trusted sites* (zone 2) or *Local intranet* (zone 1).
+
+To verify or set it on a single machine, through the interface rather than the registry:
+
+- *Internet Options › Security › Trusted sites › Sites* — add `https://your-nuxeo-host`;
+- the launch prompt is *Internet Options › Security › Trusted sites › Custom level › Launching
+  applications and unsafe files*;
+- Protected View can also be turned off independently, per application, in *Word › File › Options ›
+  Trust Center › Trust Center Settings › Protected View*, by clearing **Enable Protected View for
+  files originating from the Internet**. Changing the zone is preferable: it is narrower, and it fixes
+  the launch prompt too.
+
+#### What Protected View costs you, until it is turned off
+
+Word locks the document, reads it, then **releases the lock** and waits for the user to click *Enable
+Editing*. Between 10 and 45 seconds elapsed in the sessions measured — human reaction time.
+
+**During that pause the document is unlocked in Nuxeo**, so another user can take it. Nothing in the
+plugin can prevent this: it is the client that releases the lock.
+
+Office normally remembers a document after the first *Enable Editing* and stops prompting for it — the
+*Trusted Documents* mechanism, which is keyed on the address. **A new address is issued on every click
+of the button**, so that memory is currently defeated. See the note on the recent-files list under
+Limitations.
 
 ### macOS
 
@@ -295,8 +342,9 @@ reverse proxy.
 ## Validation status
 
 Honest reporting of what has actually been exercised against real Office clients, as opposed to the
-automated test suite. Measured on 22 September 2026, over plain HTTP, through the `ms-word:` protocol
-handler — that is, by clicking the button.
+automated test suite. Measured on 22 September 2026, through the `ms-word:` protocol handler — that is,
+by clicking the button. Windows was measured over plain HTTP on a local server, macOS over **HTTPS on a
+hosted instance**.
 
 The two clients do not behave identically, so they are reported separately.
 
@@ -311,6 +359,7 @@ The two clients do not behave identically, so they are reported separately.
 | `LOCK` per session | 1 | 3 |
 | `GET` per session | 1 | 2 |
 | Protected View pause | no | **yes**, 10 to 45 s |
+| Transport | HTTPS, hosted | plain HTTP, local |
 
 Verbs actually seen, on both: `OPTIONS`, `HEAD`, `GET`, `LOCK`, `UNLOCK`, `PROPFIND`, `PUT`.
 Never seen, on either: `PROPPATCH`, `MOVE`, `COPY`, `DELETE`, `MKCOL`.
@@ -319,7 +368,11 @@ Measured once, on macOS:
 
 - a second user holding write permission **cannot modify** the document while it is open;
 - **one version per editing session**, not per save;
-- a file name containing spaces round-trips correctly.
+- a file name containing spaces round-trips correctly;
+- **reopening from Word's recent-files list works**: the address survives closing Word, and the
+  document is locked again correctly. This is what the split between the two lifetimes is for;
+- the upload cap, the scratch permission check, the absolute session ceiling and the base URL taken
+  from the request — the whole security hardening — ran against a real client without regression.
 
 **Not yet verified:**
 
@@ -329,9 +382,10 @@ Measured once, on macOS:
 - Excel and PowerPoint. Microsoft's applications demonstrably differ: the 216-character URI limit is
   specific to Excel;
 - older Office versions;
-- HTTPS;
 - the credentials-prompt fallback against a real Office client, once the authentication window has
   lapsed — covered by automated tests only;
+- whether reusing one address per document would let Office stop showing Protected View, through its
+  Trusted Documents mechanism;
 - a large document.
 
 ### About the transacted save
@@ -363,6 +417,13 @@ If you ever see it, the sequence is in use somewhere, and the answer is settled.
   therefore also the largest document editable through this endpoint.
 - **An issued address cannot be revoked individually.** It stops authenticating after its idle window
   and dies at the absolute ceiling, but there is no "revoke this address" action.
+- **A new address is issued on every click of the button**, even for the same document and the same
+  user. Two consequences. Office's recent-files list accumulates one entry per click, of which only
+  the most recent will still work once the others expire — reopening from that list does work, it was
+  measured, but older entries eventually go stale. And on Windows it defeats Office's *Trusted
+  Documents* memory, which is keyed on the address, so the Protected View banner returns on every
+  open instead of only the first. Reusing a single address per document and user would address both;
+  it is not implemented yet.
 - **On Windows the document is briefly unlocked** while Protected View waits for *Enable Editing*.
 - **Full download and full upload.** WebDAV has no partial write: every save uploads the entire file.
   This is a property of the protocol, not of this plugin. The server side streams in both directions
@@ -372,9 +433,10 @@ If you ever see it, the sequence is in use somewhere, and the answer is settled.
 - **Stale locks.** Office locks the document while it is open. If Office crashes, the Nuxeo lock
   remains; it can be cleared with the standard Lock toggle button in the Web UI.
 - **Single repository.** Documents are resolved in the default repository.
-- **Addresses expire.** After `session.ttlMinutes` of inactivity, 30 days by default, an address kept in
-  Office's recent files stops working entirely and the user clicks the button again. Between the
-  authentication window and that limit, it works but asks for credentials.
+- **Addresses expire.** `session.ttlMinutes` after they were issued, 30 days by default, an address kept
+  in Office's recent files stops working entirely and the user clicks the button again. This ceiling is
+  absolute and is deliberately not extended by use. Between the authentication window and that limit,
+  the address still works but asks for credentials.
 - **Do not install the `nuxeo-webdav` addon alongside this plugin.** It contributes an authentication
   chain selected on the `User-Agent` header with no URL pattern at all, matching exactly the user agents
   Word and Excel send. It can take precedence over this plugin's own chain and break its authentication.
