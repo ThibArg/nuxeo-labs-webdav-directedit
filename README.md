@@ -1,5 +1,10 @@
 # Nuxeo Labs WebDAV Direct Edit
 
+> [!IMPORTANT]
+> This repository has moved to
+> [nuxeo-sandbox/nuxeo-labs-webdav-directedit](https://github.com/nuxeo-sandbox/nuxeo-labs-webdav-directedit)
+> and is archived. Please use the new location.
+
 Adds an **Open in Microsoft Office** button to the Nuxeo Web UI. One click opens the current document
 in Word, Excel or PowerPoint on the user's desktop. When the user saves from the Office application,
 the changes go straight back to Nuxeo and update the document.
